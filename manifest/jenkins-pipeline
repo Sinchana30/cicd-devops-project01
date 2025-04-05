@@ -1,0 +1,47 @@
+pipeline {
+    agent any
+    environment {
+        IMAGE_NAME = "img1"
+    }
+    stages {
+        stage('Cloning') {
+            steps {
+                git url: "https://github.com/Sinchana30/cicd-devops-project01.git", branch: "main"
+            }
+        }
+        stage('Building') {
+            steps {
+                sh "docker build -t ${IMAGE_NAME} ."
+            }
+        }
+        stage('Pushing') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: "dockerHub", passwordVariable: "dockerHubPass", usernameVariable: "dockerHubUser")]) {
+                    sh """
+                     echo "$dockerHubPass" | docker login -u "$dockerHubUser" --password-stdin
+                      docker tag ${IMAGE_NAME} $dockerHubUser/${IMAGE_NAME}:latest
+                      docker push $dockerHubUser/${IMAGE_NAME}:latest
+                    """
+                }
+            }
+        }
+        stage('Deploy') {
+            steps{
+                script{
+                    dir('manifest') {
+                        withKubeConfig(caCertificate: '', clusterName: '', contextName: '', credentialsId: 'kube', namespace: '', restrictKubeConfigAccess: false, serverUrl: '') {
+                        //debugging
+                        sh 'ls -l' 
+                       //files listed above 
+                        sh """
+                        kubectl delete --all pods
+                        kubectl apply -f Deployment.yaml
+                        kubectl apply -f service.yaml
+                        """ 
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
