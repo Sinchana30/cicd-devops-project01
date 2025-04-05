@@ -9,7 +9,6 @@ spec:
       type: demo
   template:
     metadata:
-      name: ngnix
       labels:
         type: demo
     spec:
